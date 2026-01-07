@@ -1,0 +1,11 @@
+[project]
+name = "passboard-exps"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "gensim>=4.4.0",
+    "pyclustertend>=1.9.0",
+    "tqdm>=4.67.1",
+]

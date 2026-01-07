@@ -1,0 +1,12 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+rockyou.txt
+*.json
+*.zip
+# Virtual environments
+.venv
