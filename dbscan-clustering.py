@@ -110,7 +110,7 @@ def main():
     
     # 5. t-SNE Visualization (Comparable to FastText)
     print("\n--- t-SNE Visualization ---")
-    tsne = TSNE(n_components=2, perplexity=30, init='pca', random_state=42, n_jobs=-1, metric='euclidean')
+    tsne = TSNE(n_components=2, perplexity=30, init='pca', random_state=42, n_jobs=-1)
     # Use dense array for t-SNE if memory allows (50k x 512 floats is ~200MB, totally fine)
     # Sparse t-SNE in sklearn works but 'pca' init requires dense
     X_dense = X.toarray()

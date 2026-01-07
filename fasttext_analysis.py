@@ -7,11 +7,20 @@ from sklearn.manifold import TSNE
 from sklearn.cluster import DBSCAN
 from sklearn.preprocessing import normalize
 from pyclustertend import hopkins, ivat
+from collections import defaultdict
 import random
 import warnings
+import sys
+import json
 
 # Suppress warnings for clearer output
 warnings.filterwarnings("ignore")
+
+def map_cluster_to_passwords(clusters, passwords):
+    cluster_to_passwords = defaultdict(list)
+    for cluster_id, password in zip(clusters, passwords):
+        cluster_to_passwords[int(cluster_id)].append(password)
+    return cluster_to_passwords
 
 def load_passwords(filepath="rockyou.txt", limit=None):
     print(f"Loading passwords from {filepath}...")
@@ -73,7 +82,7 @@ def find_optimal_eps(X, k=10):
     
     optimal_eps = k_distances[best_idx]
     print(f"Optimal Epsilon found: {optimal_eps:.4f}")
-    return optimal_eps
+    return optimal_eps, optimal_eps**2 / 2
 
 def main():
     # 1. Load Data
@@ -117,11 +126,16 @@ def main():
     print(f"\n--- DBSCAN Clustering (n={len(X)}) ---")
     
     # Find Epsilon
-    eps = find_optimal_eps(X, k=10)
+    eps, eps_cosine = find_optimal_eps(X, k=10)
     
-    print(f"Running DBSCAN (eps={eps:.4f}, min_samples=10)...")
-    dbscan = DBSCAN(eps=eps, min_samples=10, metric='euclidean', n_jobs=-1)
+    print(f"Running DBSCAN (eps={eps_cosine:.4f}, min_samples=10)...")
+    dbscan = DBSCAN(eps=eps_cosine, min_samples=10, metric='cosine', n_jobs=-1)
     clusters = dbscan.fit_predict(X)
+    
+    cluster_to_passwords = map_cluster_to_passwords(clusters, target_passwords)
+    # writing the cluster_to_passwords to a file
+    with open('fasttext_cluster_to_passwords.json', 'w') as f:
+        json.dump(cluster_to_passwords, f)
     
     n_clusters = len(set(clusters)) - (1 if -1 in clusters else 0)
     n_noise = list(clusters).count(-1)
