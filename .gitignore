@@ -6,7 +6,8 @@ dist/
 wheels/
 *.egg-info
 rockyou.txt
-*.json
+clustering-analysis/*.json
 *.zip
 # Virtual environments
 .venv
+clustering-analysis/markov-model.json
