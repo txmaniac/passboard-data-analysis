@@ -11,3 +11,11 @@ clustering-analysis/*.json
 # Virtual environments
 .venv
 clustering-analysis/markov-model.json
+*/*.json
+models/*
+passboard-extension/*
+rust_density
+*.txt
+*/*.txt
+*.csv
+*/*.csv

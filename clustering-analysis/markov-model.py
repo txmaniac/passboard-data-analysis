@@ -89,7 +89,9 @@ if __name__ == "__main__":
     mm = MarkovModel(4, "markov_model.json")
     mm.train(words)
     
-    # predict next char
-    prefix = "passwor"
-    print(mm.predict(prefix))
-    print(mm.top_k_weak(prefix, 20))
+    while True:
+        prefix = input("Enter prefix: ")
+        if prefix == "exit":
+            break
+        print(f"Entropy: {mm.predict(prefix)}")
+        print(f"Top 20 weak suffixes: {mm.top_k_weak(prefix, 20)}")
