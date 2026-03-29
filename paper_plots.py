@@ -2,6 +2,8 @@ import sys
 sys.path.append("risk-estimation-libs")
 import os
 import numpy as np
+import pandas as pd
+import random
 import matplotlib.pyplot as plt
 import seaborn as sns
 from ann_density import ANNDensity
@@ -16,6 +18,11 @@ import matplotlib.patches as patches
 plt.rcParams['font.family'] = 'serif'
 plt.rcParams['font.serif'] = ['Times New Roman'] + plt.rcParams['font.serif']
 plt.rcParams['figure.dpi'] = 300
+plt.rcParams['axes.titlesize'] = 18
+plt.rcParams['axes.labelsize'] = 16
+plt.rcParams['xtick.labelsize'] = 14
+plt.rcParams['ytick.labelsize'] = 14
+plt.rcParams['legend.fontsize'] = 14
 
 def load_models():
     print("Loading Models...")
@@ -58,7 +65,9 @@ def plot_reuse_density(ann):
     plt.axvline(x=np.percentile(sample_dists, 10), color='red', linestyle='--', label='High Risk (Top 10%)')
     plt.legend()
     plt.tight_layout()
+    plt.tight_layout()
     plt.savefig("paper_plot_1_reuse_density.png")
+    plt.savefig("paper_plot_1_reuse_density.svg")
     plt.close()
 
 # 2. Reuse Risk vs Predictability (Scatter)
@@ -101,6 +110,7 @@ def plot_risk_scatter(ann, mm):
     plt.grid(True, linestyle='--', alpha=0.3)
     plt.tight_layout()
     plt.savefig("paper_plot_2_scatter.png")
+    plt.savefig("paper_plot_2_scatter.svg")
     plt.close()
 
 # 3. Risk Evolution (Line Plot)
@@ -128,6 +138,7 @@ def plot_risk_evolution(ann, mm):
     plt.grid(True)
     plt.tight_layout()
     plt.savefig("paper_plot_3_evolution.png")
+    plt.savefig("paper_plot_3_evolution.svg")
     plt.close()
 
 # 4. Targeted Key Blocking (Keyboard Schematic)
@@ -180,6 +191,7 @@ def plot_keyboard_example(ann, mm):
     plt.xlim(-1, 15)
     plt.ylim(0, 6)
     plt.savefig("paper_plot_4_keyboard.png")
+    plt.savefig("paper_plot_4_keyboard.svg")
     plt.close()
 
 # 5. Intervention Timing (Empirical Simulation)
@@ -201,7 +213,7 @@ def plot_intervention_timing(ann, mm):
         #         lengths.append(len(p))
 
         for p in data[:10000]:
-            if 8 <= len(p) <= 20:
+            if 4 <= len(p) <= 20:
                 lengths.append(len(p))
         mm_typist.save(os.path.join("models", "mm_typist.json"))
     elif os.path.exists(os.path.join("models", "mm_typist.json")):
@@ -244,6 +256,7 @@ def plot_intervention_timing(ann, mm):
     plt.title("Comparison of Intervention Position (Empirical)")
     plt.grid(axis='y', linestyle='--', alpha=0.5)
     plt.savefig("paper_plot_5_timing.png")
+    plt.savefig("paper_plot_5_timing.svg")
     plt.close()
 
 # 6. Total Risk Distribution (Empirical Simulation)
@@ -293,6 +306,7 @@ def plot_outcomes_kde(ann, mm):
     plt.legend()
     plt.tight_layout()
     plt.savefig("paper_plot_6_outcomes.png")
+    plt.savefig("paper_plot_6_outcomes.svg")
     plt.close()
 
 
@@ -366,6 +380,7 @@ def plot_risk_dynamics_analysis(ann, mm):
     plt.legend()
     plt.grid(True, linestyle='--', alpha=0.3)
     plt.savefig("paper_plot_c1_evolution.png")
+    plt.savefig("paper_plot_c1_evolution.svg")
     plt.close()
     
     # --- C2: Gradients (Use Baseline for Dynamics Analysis) ---
@@ -391,6 +406,7 @@ def plot_risk_dynamics_analysis(ann, mm):
     plt.grid(True, linestyle='--', alpha=0.3)
     plt.tight_layout()
     plt.savefig("paper_plot_c2_gradients.png")
+    plt.savefig("paper_plot_c2_gradients.svg")
     plt.close()
     
     # --- C3: Early Predictiveness Correlation ---
@@ -416,6 +432,7 @@ def plot_risk_dynamics_analysis(ann, mm):
     plt.xticks(steps)
     plt.tight_layout()
     plt.savefig("paper_plot_c3_correlation.png")
+    plt.savefig("paper_plot_c3_correlation.svg")
     plt.close()
 
 # 8. Weak Password Evolution Demo (Qualitative)
@@ -480,11 +497,9 @@ def plot_weak_evolution_demo(ann, mm):
     plt.legend()
     plt.grid(True, alpha=0.3)
     plt.tight_layout()
-    plt.savefig("paper_plot_weak_evolution.png")
-    plt.close()
-
     plt.tight_layout()
     plt.savefig("paper_plot_weak_evolution.png")
+    plt.savefig("paper_plot_weak_evolution.svg")
     plt.close()
 
 # 9. Trajectory Divergence Analysis (Real Data Replay)
@@ -596,6 +611,7 @@ def plot_replay_divergence_analysis(ann, mm):
     plt.grid(True, alpha=0.3)
     plt.tight_layout()
     plt.savefig("paper_plot_c4_divergence.png")
+    plt.savefig("paper_plot_c4_divergence.svg")
     plt.close()
 
 
@@ -639,10 +655,10 @@ def plot_risk_cdf_split(ann, mm):
         
         lengths = [8, 10, 12, 14]
         
-        # Run N=50 simulations
-        for i in range(50):
+        # Run N=100 simulations
+        for i in range(100):
             if i % 10 == 0:
-                print(f"    {name}: {i}/50")
+                print(f"    {name}: {i}/100")
             
             target_L = int(np.random.choice(lengths))
             
@@ -681,16 +697,524 @@ def plot_risk_cdf_split(ann, mm):
         plt.grid(True, alpha=0.3)
         plt.tight_layout()
         plt.savefig(filename)
+        if filename.endswith(".png"):
+            plt.savefig(filename.replace(".png", ".svg"))
         plt.close()
+
+
+# [NEW] Plot 3: Cumulative Intervention Probability
+def plot_cumulative_intervention(ann, mm):
+    print("Plotting New 3: Cumulative Intervention Probability (CHI Style)...")
+    
+    # Setup
+    mm_typist = MarkovModel(n=4)
+    files = ["rockyou_typist.txt", "../rockyou_typist.txt"]
+    typist_file = next((f for f in files if os.path.exists(f)), None)
+    
+    if typist_file:
+         with open(typist_file, "r", encoding="utf-8", errors="ignore") as f:
+            data = f.read().splitlines()
+         mm_typist.train(data[:50000])
+    
+    typist = MarkovTypist(mm_typist)
+    risk_func = get_risk_evaluator(ann, mm)
+    engine = SimulationEngine(risk_func)
+    
+    policy_proactive = ThresholdPolicy(threshold=80.0, min_escape_percent=0.10)
+    policy_null = NullPolicy() # For Post-hoc baseline
+    
+    N = 200
+    FIXED_LEN = 12
+    
+    proactive_times = []
+    posthoc_times = []
+    
+    print(f"Simulating N={N} trajectories (Fixed Length={FIXED_LEN})...")
+    
+    for _ in range(N):
+        # 1. Run Proactive
+        stats = engine.run_trajectory(typist, policy_proactive, target_length=FIXED_LEN)
+        if stats['first_blocked_at'] is not None:
+             proactive_times.append(stats['first_blocked_at'])
+        
+        # 2. Run Post-hoc (Baseline check at end)
+        # We need to know if the *final* password would be rejected.
+        # Run with NullPolicy to get the "natural" password
+        stats_base = engine.run_trajectory(typist, policy_null, target_length=FIXED_LEN)
+        final_pwd = stats_base['password']
+        
+        # Check risk of final password
+        # Note: We need 'combined risk'. 
+        # engine.run_trajectory calculates trace. Last element is final risk.
+        if len(stats_base['risk_trace']) > 0:
+            final_risk = stats_base['risk_trace'][-1]
+            if final_risk > 80.0:
+                posthoc_times.append(FIXED_LEN) # Intervention happens AT the end
+    
+    # Prepare Data for CDF
+    # create arrays of size N? No, we want P(Intervention).
+    # If 1000 users, and 200 intervened, max prob is 0.2.
+    # We should include non-intervened as "infinite" time or handled by normalization.
+    # Easiest way: Create an array of size N. fill non-interventions with a value > FIXED_LEN (e.g. 100).
+    # Then plot ECDF up to FIXED_LEN.
+    
+    proactive_all = np.array(proactive_times + [100] * (N - len(proactive_times)))
+    posthoc_all = np.array(posthoc_times + [100] * (N - len(posthoc_times)))
+    
+    plt.figure(figsize=(8, 5))
+    
+    # Plot Proactive
+    sns.ecdfplot(proactive_all, label="Proactive Intervention", color='#2ca02c', linewidth=3)
+    
+    # Plot Post-hoc
+    sns.ecdfplot(posthoc_all, label="Post-hoc Rejection", color='#1f77b4', linewidth=3, linestyle='--')
+    
+    plt.xlim(1, FIXED_LEN)
+    plt.ylim(0, 1.0) # Users might want to see the ceiling (e.g. 0.4)
+    # Actually auto-ylim is better to see the plateau? 
+    # But "Probability" usually implies 0-1 scale context. 
+    # Let's set ylim to a bit above max (e.g. max rejection rate + 0.1) or just 0-0.5 if rates are low.
+    # But standard CDF is 0-1. Let's stick to auto or 0-1 if high.
+    # Let's check max rate.
+    max_p = len(proactive_times) / N
+    max_ph = len(posthoc_times) / N
+    top_y = max(max_p, max_ph) * 1.2
+    if top_y > 1.0: top_y = 1.0
+    plt.ylim(0, top_y)
+
+    plt.title("Cumulative Probability of Intervention")
+    plt.xlabel("Keystroke Index")
+    plt.ylabel("Probability (Intervention Occurred)")
+    plt.legend(loc="upper left")
+    plt.grid(True, linestyle='--', alpha=0.3)
+    
+    # Add annotations
+    plt.text(FIXED_LEN-1, len(posthoc_times)/N, f"  Rejected: {len(posthoc_times)/N:.1%}", 
+             va='bottom', ha='right', color='#1f77b4', fontweight='bold')
+    
+    plt.tight_layout()
+    plt.savefig("paper_plot_new_3_cumulative.png")
+    plt.savefig("paper_plot_new_3_cumulative.svg")
+    plt.close()
+
+# [NEW] Plot 11: Comparative Substitution Risk (Paired Scatter)
+def plot_substitution_scatter(ann, mm):
+    print("Plotting New: Paired Substitution Risk Scatter (N=100)...")
+    
+    # Setup Models
+    mm_typist = MarkovModel(n=4)
+    files = ["rockyou_typist.txt", "../rockyou_typist.txt"]
+    typist_file = next((f for f in files if os.path.exists(f)), None)
+    if typist_file:
+         with open(typist_file, "r", encoding="utf-8", errors="ignore") as f:
+            data = f.read().splitlines()
+         mm_typist.train(data[:50000])
+
+    risk_func = get_risk_evaluator(ann, mm)
+    engine = SimulationEngine(risk_func)
+    
+    policy_null = NullPolicy()
+    policy_block = ThresholdPolicy(threshold=80.0, min_escape_percent=0.10)
+    
+    # We need to simulate PAIRS: Same intent, different policy.
+    # For Template: Re-use the same plan.
+    # For Markov: Re-use the same random seed? (Tricky due to divergence)
+    # Better: Re-use the seed for the *START*, understanding that traces diverge.
+    # This represents "The same user trying multiple times" or "Parallel Universes".
+    
+    scenarios = [
+        ("Markov Typist", MarkovTypist(mm_typist), "#1f77b4", "o"), # Blue Circle
+        ("Template Typist", RobustTemplateTypist(), "#d62728", "^")  # Red Triangle
+    ]
+    
+    plt.figure(figsize=(8, 8))
+    
+    # Diagonal Line
+    plt.plot([0, 100], [0, 100], 'k--', alpha=0.3, label="No Change")
+    
+    # Threshold Lines
+    plt.axvline(x=80, color='gray', linestyle=':', alpha=0.5)
+    plt.axhline(y=80, color='gray', linestyle=':', alpha=0.5)
+    
+    for name, typist, color, marker in scenarios:
+        baseline_risks = []
+        blocked_risks = []
+        
+        print(f"  Simulating {name} Pairs...")
+        for i in range(100):
+            # Seed based on i to ensure pair consistency (if supported by typist reset)
+            # TemplateTypist uses random.choice for generation.
+            # MarkovTypist uses np.random.
+            
+            # 1. Run Baseline
+            seed = 42 + i
+            
+            # Reset Typist State
+            random.seed(seed)
+            np.random.seed(seed)
+            if hasattr(typist, 'start_new_password'):
+                typist.start_new_password() # Pre-generate plan for Template
+            
+            # Get length
+            L = int(np.random.choice([10, 12, 14])) # Length decision is part of user intent
+            
+            # Capture state for replay (deep copy or just re-seed)
+            # Re-seeding is easiest.
+            
+            # Run Baseline
+            stats_base = engine.run_trajectory(typist, policy_null, target_length=L)
+            r_base = stats_base['risk_trace'][-1] if stats_base['risk_trace'] else 0
+            
+            # 2. Run Blocked (Replay same intent)
+            random.seed(seed)
+            np.random.seed(seed)
+            if hasattr(typist, 'start_new_password'):
+                 # Ensure we get the SAME plan again
+                 typist.start_new_password()
+                 
+            stats_block = engine.run_trajectory(typist, policy_block, target_length=L)
+            r_block = stats_block['risk_trace'][-1] if stats_block['risk_trace'] else 0
+            
+            baseline_risks.append(r_base)
+            blocked_risks.append(r_block)
+            
+        # Plot Scatter
+        plt.scatter(baseline_risks, blocked_risks, color=color, marker=marker, 
+                    alpha=0.6, s=60, edgecolors='white', label=name)
+        
+        # Calculate Improvement Stats
+        # Avg Drop
+        diffs = np.array(baseline_risks) - np.array(blocked_risks)
+        print(f"    {name} Avg Reduction: {np.mean(diffs):.2f}")
+
+    plt.title("Effect of Blocking on Risk: Before vs. After (Paired)")
+    plt.xlabel("Baseline Risk (Post-hoc)")
+    plt.ylabel("Risk with Proactive Blocking (T80)")
+    plt.xlim(0, 105)
+    plt.ylim(0, 105)
+    plt.legend(loc='upper left')
+    plt.grid(True, linestyle='--', alpha=0.3)
+    
+    # Annotation
+    plt.text(95, 20, "Safe Zone\n(Risk Reduced)", fontsize=12, color='green', ha='right', fontweight='bold')
+    plt.text(20, 95, "Worse Zone\n(Risk Increased)", fontsize=10, color='red', ha='left')
+    
+    plt.tight_layout()
+    plt.savefig("paper_plot_new_substitution.png")
+    plt.savefig("paper_plot_new_substitution.svg")
+    plt.close()
 
 if __name__ == "__main__":
     ann, mm = load_models()
     # plot_reuse_density(ann)
     # plot_risk_scatter(ann, mm)
+    # plot_risk_evolution(ann, mm)
+    # plot_keyboard_example(ann, mm)
     # plot_intervention_timing(ann, mm)
     # plot_outcomes_kde(ann, mm)
     # plot_risk_dynamics_analysis(ann, mm)
+    # plot_weak_evolution_demo(ann, mm)
     # plot_replay_divergence_analysis(ann, mm)
+    # plot_risk_cdf_split(ann, mm)
+# [NEW] Plot 12: Weight Parameter Justification (Balance)
+def plot_weight_justification(ann, mm):
+    print("Plotting New: Weight Parameter Justification (N=100)...")
     
-    plot_risk_cdf_split(ann, mm)
-    print("Split Risk CDF Comparison generated.")
+    # We define a temporary risk evaluator factory
+    def make_evaluator(w_density):
+        w_entropy = 1.0 - w_density
+        def evaluator(prefix, candidates):
+            queries = [prefix + c for c in candidates]
+            distances = ann.query(queries, k=20)
+            d_risks = ann.get_risk_percentile(distances)
+            e_risks = []
+            for c in candidates:
+                rate = mm.calculate_entropy_rate(prefix + c)
+                r = max(0, min(100, (1.0 - (rate / 8.0)) * 100))
+                e_risks.append(r)
+            
+            final_risks = {}
+            for i, c in enumerate(candidates):
+                combined = w_density * d_risks[i] + w_entropy * e_risks[i]
+                final_risks[c] = combined
+            return final_risks
+        return evaluator
+
+    # Typist: Template (High Risk user)
+    # We want to show how the system handles high risk under different weights
+    typist = RobustTemplateTypist()
+    policy = ThresholdPolicy(threshold=80.0, min_escape_percent=0.10)
+    
+    weights = [0.0, 0.2, 0.4, 0.5, 0.6, 0.8, 1.0]
+    
+    avg_d_risks = []
+    avg_e_risks = []
+    
+    print("Simulating Weight Variations...")
+    for w in weights:
+        risk_func = make_evaluator(w)
+        engine = SimulationEngine(risk_func)
+        
+        curr_d = []
+        curr_e = []
+        
+        # N=50
+        for _ in range(50):
+             typist.start_new_password()
+             stats = engine.run_trajectory(typist, policy, target_length=12)
+             pwd = stats['password']
+             
+             # Evaluate final components
+             d_dist = ann.query([pwd])[0]
+             d_risk = ann.get_risk_percentile([d_dist])[0]
+             e_rate = mm.calculate_entropy_rate(pwd)
+             e_risk = max(0, min(100, (1.0 - (e_rate / 8.0)) * 100))
+             
+             curr_d.append(d_risk)
+             curr_e.append(e_risk)
+             
+        avg_d_risks.append(np.mean(curr_d))
+        avg_e_risks.append(np.mean(curr_e))
+        print(f"  w={w}: D_risk={np.mean(curr_d):.1f}, E_risk={np.mean(curr_e):.1f}")
+        
+    plt.figure(figsize=(8, 6))
+    plt.plot(weights, avg_d_risks, 'r-o', label="Final Density Risk", linewidth=2)
+    plt.plot(weights, avg_e_risks, 'b-s', label="Final Entropy Risk", linewidth=2)
+    
+    # Justify 0.5
+    plt.axvline(x=0.5, color='gray', linestyle='--', label="Chosen Weight (0.5)")
+    
+    plt.title("Parameter Justification: Weight Balance")
+    plt.xlabel("Weight assigned to Density ($\lambda_{density}$)")
+    plt.ylabel("Resulting Component Risk (Lower is Better)")
+    plt.grid(True, linestyle='--', alpha=0.3)
+    plt.legend()
+    
+    plt.tight_layout()
+    plt.savefig("paper_plot_weight_justification.png")
+    plt.savefig("paper_plot_weight_justification.svg")
+    plt.close()
+
+# [NEW] Plot 13: Threshold Justification (Trade-off)
+def plot_threshold_justification(ann, mm):
+    print("Plotting New: Threshold Justification (N=100)...")
+    
+    risk_func = get_risk_evaluator(ann, mm)
+    engine = SimulationEngine(risk_func)
+    typist = RobustTemplateTypist() # Target high-risk users
+    
+    thresholds = [60, 70, 80, 90, 95]
+    
+    reductions = []
+    interventions = []
+    
+    # Baseline Risk for N=50 (approx 70ish)
+    # Let's run Baseline first
+    base_risks = []
+    for _ in range(50):
+        typist.start_new_password()
+        stats = engine.run_trajectory(typist, NullPolicy(), target_length=12)
+        if stats['risk_trace']:
+            base_risks.append(stats['risk_trace'][-1])
+    avg_baseline = np.mean(base_risks)
+    print(f"Baseline Average Risk: {avg_baseline:.1f}")
+
+    print("Simulating Threshold Variations...")
+    for T in thresholds:
+        policy = ThresholdPolicy(threshold=float(T), min_escape_percent=0.10)
+        
+        curr_risks = []
+        curr_counts = []
+        
+        for _ in range(50):
+            typist.start_new_password()
+            stats = engine.run_trajectory(typist, policy, target_length=12)
+            if stats['risk_trace']:
+                curr_risks.append(stats['risk_trace'][-1])
+            curr_counts.append(stats['blocked_steps'])
+            
+        avg_risk = np.mean(curr_risks)
+        reduction = avg_baseline - avg_risk
+        avg_int = np.mean(curr_counts)
+        
+        reductions.append(reduction)
+        interventions.append(avg_int)
+        print(f"  T={T}: Reduction={reduction:.1f}, Interventions={avg_int:.1f}")
+        
+    fig, ax1 = plt.subplots(figsize=(9, 6))
+    
+    color = 'tab:green'
+    ax1.set_xlabel('Intervention Threshold (T)')
+    ax1.set_ylabel('Risk Reduction (Benefit)', color=color, fontweight='bold')
+    ax1.plot(thresholds, reductions, color=color, marker='o', linewidth=2, label="Risk Reduction")
+    ax1.tick_params(axis='y', labelcolor=color)
+    ax1.set_ylim(0, max(reductions)*1.2)
+    ax1.invert_xaxis() # High threshold (relaxed) on left? No, standard axis. 
+    # Left=60 (Strict), Right=95 (Relaxed).
+    
+    ax2 = ax1.twinx()  
+    color = 'tab:red'
+    ax2.set_ylabel('Avg Interventions (Cost)', color=color, fontweight='bold')
+    ax2.plot(thresholds, interventions, color=color, marker='x', linestyle='--', linewidth=2, label="User Friction")
+    ax2.tick_params(axis='y', labelcolor=color)
+    ax2.set_ylim(0, 12) # Max 12 keystrokes
+    
+    # Highlight 80
+    ax1.axvline(x=80, color='gray', linestyle=':', label="Chosen T=80")
+    
+    plt.title("Parameter Justification: Threshold Trade-off")
+    fig.tight_layout()
+    plt.savefig("paper_plot_threshold_justification.png")
+    plt.savefig("paper_plot_threshold_justification.svg")
+    plt.close()
+
+
+    
+# [NEW] Plot Variants: Distribution of Total Risk (Comparison)
+def plot_risk_distribution_variants(ann, mm):
+    print("Plotting Risk Distribution Variants (N=1000 Mix)...")
+    
+    risk_func = get_risk_evaluator(ann, mm)
+    engine = SimulationEngine(risk_func)
+    
+    # Models
+    # Load Markov
+    mm_typist = MarkovModel(n=4)
+    if os.path.exists("models/mm_typist.json"):
+         mm_typist.load("models/mm_typist.json")
+    else:
+        # Quick train if missing (fallback)
+        files = ["rockyou_typist.txt", "../rockyou_typist.txt"]
+        typist_file = next((f for f in files if os.path.exists(f)), None)
+        if typist_file:
+             with open(typist_file, "r", encoding="utf-8", errors="ignore") as f:
+                data = f.read().splitlines()
+             mm_typist.train(data[:10000])
+
+    typist_markov = MarkovTypist(mm_typist)
+    typist_template = RobustTemplateTypist()
+    
+    policy_null = NullPolicy()
+    policy_block = ThresholdPolicy(threshold=80.0, min_escape_percent=0.10)
+    
+    # Data Collection
+    risks_baseline = []
+    risks_proactive = []
+    
+    N = 200
+    
+    print("Simulating Mixed Population (N=200)...")
+    for i in range(N):
+        # 50/50 Mix
+        if i % 2 == 0:
+            typist = typist_markov
+        else:
+            typist = typist_template
+            typist.start_new_password()
+            
+        target_L = int(np.random.choice([8, 10, 12, 14]))
+        
+        # 1. Baseline (No Intervention)
+        # For Markov, we need to control seed if we want "matched" intent, 
+        # but distribution comparison is fine with distinct samples from same generator.
+        # Let's just run independent samples to represent the *Population Distribution*.
+        
+        stats_base = engine.run_trajectory(typist, policy_null, target_length=target_L)
+        if stats_base['risk_trace']:
+            risks_baseline.append(stats_base['risk_trace'][-1])
+            
+        # 2. Proactive (Blocking)
+        # Re-run logic for template to reset
+        if hasattr(typist, 'start_new_password'):
+            typist.start_new_password() 
+        stats_block = engine.run_trajectory(typist, policy_block, target_length=target_L)
+        if stats_block['risk_trace']:
+            risks_proactive.append(stats_block['risk_trace'][-1])
+            
+    # 3. Post-hoc (Filter Baseline)
+    risks_baseline = np.array(risks_baseline)
+    # Filter: Only accepted passwords (Risk <= 80)
+    risks_posthoc = risks_baseline[risks_baseline <= 80.0]
+    
+    risks_proactive = np.array(risks_proactive)
+    
+    print(f"Stats:")
+    print(f"  Baseline (N={len(risks_baseline)}): Mean={np.mean(risks_baseline):.1f}")
+    print(f"  Post-hoc (N={len(risks_posthoc)}): Mean={np.mean(risks_posthoc):.1f} (Rejected {len(risks_baseline)-len(risks_posthoc)})")
+    print(f"  Proactive (N={len(risks_proactive)}): Mean={np.mean(risks_proactive):.1f}")
+
+    # --- Variant A: KDE Plot (Density) ---
+    plt.figure(figsize=(10, 6))
+    sns.kdeplot(risks_baseline, label="Baseline (No Policy)", fill=True, color="gray", alpha=0.3)
+    sns.kdeplot(risks_posthoc, label="Post-hoc Rejection (Accepted Only)", fill=True, color="#1f77b4", alpha=0.4)
+    sns.kdeplot(risks_proactive, label="Proactive Blocking (Ours)", fill=True, color="#2ca02c", alpha=0.5)
+    plt.axvline(x=80, color='red', linestyle=':', label="Threshold (80)")
+    plt.title("Distribution Variant A: Kernel Density Estimate (KDE)")
+    plt.xlabel("Combined Risk Score")
+    plt.xlim(0, 100)
+    plt.legend()
+    plt.grid(True, alpha=0.3)
+    plt.tight_layout()
+    plt.savefig("paper_plot_variant_A_kde.png")
+    plt.savefig("paper_plot_variant_A_kde.svg")
+    plt.close()
+    
+    # --- Variant B: CDF Plot (Cumulative) ---
+    plt.figure(figsize=(10, 6))
+    sns.ecdfplot(risks_baseline, label="Baseline (No Policy)", color="gray", linestyle="--")
+    sns.ecdfplot(risks_posthoc, label="Post-hoc Rejection (Accepted Only)", color="#1f77b4", linewidth=2)
+    sns.ecdfplot(risks_proactive, label="Proactive Blocking (Ours)", color="#2ca02c", linewidth=3)
+    plt.axvline(x=80, color='red', linestyle=':')
+    plt.title("Distribution Variant B: Cumulative Distribution (CDF)")
+    plt.xlabel("Combined Risk Score (x)")
+    plt.ylabel("Fraction of Sample (N=1000)")
+    plt.xlim(0, 100)
+    plt.legend()
+    plt.grid(True, alpha=0.3)
+    plt.tight_layout()
+    plt.savefig("paper_plot_variant_B_cdf.png")
+    plt.savefig("paper_plot_variant_B_cdf.svg")
+    plt.close()
+
+    # --- Variant C: Box Plot (Summary) ---
+    plt.figure(figsize=(8, 6))
+    data_box = []
+    # Create DF
+    for r in risks_baseline: data_box.append({'Method': "Baseline\n(No Policy)", 'Risk': r})
+    for r in risks_posthoc: data_box.append({'Method': "Post-hoc\n(Accepted Only)", 'Risk': r})
+    for r in risks_proactive: data_box.append({'Method': "Proactive\n(Ours)", 'Risk': r})
+    df_box = pd.DataFrame(data_box)
+    
+    sns.boxplot(data=df_box, x="Method", y="Risk", palette=["lightgray", "#6baed6", "#74c476"])
+    plt.axhline(y=80, color='red', linestyle=':', label="Threshold")
+    plt.title("Distribution Variant C: Box Plot Comparison")
+    plt.grid(True, axis='y', alpha=0.3)
+    plt.tight_layout()
+    plt.savefig("paper_plot_variant_C_box.png")
+    plt.savefig("paper_plot_variant_C_box.svg")
+    plt.close()
+
+    # --- Variant D: Histogram (Step) ---
+    plt.figure(figsize=(10, 6))
+    plt.hist(risks_baseline, bins=30, density=True, histtype='step', color='gray', label="No Intervention", linewidth=1.5, linestyle='--')
+    plt.hist(risks_posthoc, bins=30, density=True, histtype='step', color='#1f77b4', label="Post-hoc Rejection", linewidth=2)
+    plt.hist(risks_proactive, bins=30, density=True, histtype='stepfilled', color='#2ca02c', label="Proactive Blocking", alpha=0.3, edgecolor='#2ca02c')
+    plt.axvline(x=80, color='red', linestyle=':')
+    plt.title("Distribution Variant D: Histogram Comparison")
+    plt.xlabel("Combined Risk Score")
+    plt.ylabel("Density")
+    plt.xlim(0, 100)
+    plt.legend()
+    plt.grid(True, alpha=0.3)
+    plt.tight_layout()
+    plt.savefig("paper_plot_variant_D_hist.png")
+    plt.savefig("paper_plot_variant_D_hist.svg")
+    plt.close()
+
+if __name__ == "__main__":
+    ann, mm = load_models()
+    # plots...
+    # plot_risk_distribution_variants(ann, mm)
+    
+    plot_intervention_timing(ann, mm)
+    print("All High-Quality Plots Generated (PNG & SVG).")

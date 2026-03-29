@@ -4,6 +4,16 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import string
+
+# Setup Fonts for "Paper Quality"
+plt.rcParams['font.family'] = 'serif'
+plt.rcParams['font.serif'] = ['Times New Roman'] + plt.rcParams['font.serif']
+plt.rcParams['figure.dpi'] = 300
+plt.rcParams['axes.titlesize'] = 18
+plt.rcParams['axes.labelsize'] = 16
+plt.rcParams['xtick.labelsize'] = 14
+plt.rcParams['ytick.labelsize'] = 14
+plt.rcParams['legend.fontsize'] = 14
 from scipy.stats import percentileofscore
 
 # Add parent directory to path to import scalable-density-analysis
@@ -173,8 +183,10 @@ class RiskAnalyzer:
             # Draw Key
             rect = patches.Rectangle((pos[0], pos[1]), 0.9, 0.9, linewidth=1, edgecolor='black', facecolor=color)
             ax.add_patch(rect)
-            ax.text(pos[0] + 0.45, pos[1] + 0.45, key.upper(), ha='center', va='center', fontsize=10, fontweight='bold')
-            ax.text(pos[0] + 0.45, pos[1] + 0.15, f"{delta:+.0f}", ha='center', va='center', fontsize=7)
+            # Big Key Label (Top)
+            ax.text(pos[0] + 0.45, pos[1] + 0.65, key.upper(), ha='center', va='center', fontsize=22, fontweight='bold')
+            # Big Score Label (Bottom)
+            ax.text(pos[0] + 0.45, pos[1] + 0.25, f"{delta:+.0f}", ha='center', va='center', fontsize=16, fontweight='bold')
 
         ax.set_xlim(-0.5, 10.5)
         ax.set_ylim(-0.5, 4.5)
@@ -183,7 +195,8 @@ class RiskAnalyzer:
         
         out_file = f"heatmap_risk_{prefix}.png"
         plt.savefig(out_file)
-        print(f"Saved heatmap to {out_file}")
+        plt.savefig(out_file.replace(".png", ".svg"))
+        print(f"Saved heatmap to {out_file} and SVG")
         plt.close()
 
 if __name__ == "__main__":
@@ -246,4 +259,5 @@ if __name__ == "__main__":
     plt.xlim(0, 1.1)
     plt.tight_layout()
     plt.savefig("escape_stats.png")
-    print("Saved escape stats plot to escape_stats.png")
+    plt.savefig("escape_stats.svg")
+    print("Saved escape stats plot to escape_stats.png and SVG")

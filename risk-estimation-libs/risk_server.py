@@ -20,28 +20,32 @@ async def lifespan(app: FastAPI):
     print("Loading Risk Models...")
     
     # Paths
-    rockyou_risk_path = "rockyou_risk.txt"
+    BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    rockyou_risk_path = os.path.join(BASE_DIR, "rockyou_risk.txt")
+    models_dir = os.path.join(BASE_DIR, "models")
+    
     if not os.path.exists(rockyou_risk_path):
         # Fallback to main rockyou if split doesn't exist (sim run might not happened)
         # But we need training data.
         print(f"Warning: {rockyou_risk_path} not found. Using reduced functionality or creating empty?")
         # Just error out for now or define fallback
-        if os.path.exists("rockyou.txt"):
-             rockyou_risk_path = "rockyou.txt"
+        fallback_path = os.path.join(BASE_DIR, "rockyou.txt")
+        if os.path.exists(fallback_path):
+             rockyou_risk_path = fallback_path
     
     # 1. ANNDensity
     try:
-        print("Attempting to load cached models...")
+        print(f"Attempting to load cached models from {models_dir}...")
         ann = ANNDensity(k=20, file_path=None, limit=None, embedding_type='tfidf')
-        ann.load_model("models")
+        ann.load_model(models_dir)
         print("Cached models loaded.")
     except Exception as e:
-        print(f"Cache load failed ({e}). Training from scratch...")
+        print(f"Cache load failed ({e}). Training from scratch using {rockyou_risk_path}...")
         ann = ANNDensity(k=20, file_path=rockyou_risk_path, limit=None, embedding_type='tfidf')
         ann.fit(backend='faiss')
         # Auto-save for next time
         try:
-            ann.save_model("models")
+            ann.save_model(models_dir)
         except Exception as se:
             print(f"Failed to save model: {se}")
             
@@ -49,10 +53,10 @@ async def lifespan(app: FastAPI):
     
     # 2. Markov
     mm = MarkovModel(n=4)
-    mm_path = os.path.join("models", "markov_model.json")
+    mm_path = os.path.join(models_dir, "markov_model.json")
     if os.path.exists(mm_path):
         try:
-            print("Loading cached Markov model...")
+            print(f"Loading cached Markov model from {mm_path}...")
             mm.load(mm_path)
             print("Cached Markov loaded.")
         except Exception as e:
@@ -68,6 +72,7 @@ async def lifespan(app: FastAPI):
     else:
         # Fallback train
         if os.path.exists(rockyou_risk_path):
+            print(f"Training Markov from {rockyou_risk_path}...")
             with open(rockyou_risk_path, "r", encoding="utf-8", errors="ignore") as f:
                 data = f.read().splitlines()
             mm.train(data)

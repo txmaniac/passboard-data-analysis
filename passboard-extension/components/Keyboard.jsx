@@ -19,19 +19,13 @@ const LAYOUTS = {
     ]
 };
 
-const COLORS = [
-    'bg-red-500', 'bg-orange-500', 'bg-yellow-500', 'bg-green-500', 'bg-blue-500', 'bg-indigo-500', 'bg-purple-500', 'bg-pink-500'
-];
-
 export default function Keyboard({ onKeyPress, blockedKeys = [] }) {
     const [layout, setLayout] = useState('default'); // default, shift, symbols
-    const [capsLock, setCapsLock] = useState(false);
     const [activeKey, setActiveKey] = useState(null);
 
     const handlePress = (key, action) => {
-        // Visual feedback
-        const randomColor = COLORS[Math.floor(Math.random() * COLORS.length)];
-        setActiveKey({ key, color: randomColor });
+        // Simple visual feedback (grey press)
+        setActiveKey(key);
         setTimeout(() => setActiveKey(null), 200);
 
         if (action) {
@@ -54,28 +48,40 @@ export default function Keyboard({ onKeyPress, blockedKeys = [] }) {
         // Normal Character
         onKeyPress({ type: 'char', value: key });
 
-        // Auto-reset shift if not caps locked (simplification: just reset shift after one char)
-        // Actually standard mobile keyboard behavior: Shift -> Uppercase 1 char -> Lowercase
         if (layout === 'shift') {
             setLayout('default');
         }
     };
 
+    // Calculate Layer Risks
+    const isSymbolLayerRisky = LAYOUTS.symbols.flat().some(k => blockedKeys.includes(k));
+    // Check both default and shift for alpha risk
+    const isAlphaLayerRisky = [...LAYOUTS.default.flat(), ...LAYOUTS.shift.flat()].some(k => blockedKeys.includes(k));
+
     const renderKey = (key, label = key, width = 'w-8 sm:w-10', action = null) => {
-        const isActive = activeKey?.key === key;
+        const isActive = activeKey === key;
         const isBlocked = !action && blockedKeys.includes(key);
+
+        // Determine if this is a layer switch button that needs a risk indicator
+        let showRiskIndicator = false;
+        if (action === 'symbols') {
+            if (layout === 'symbols' && isAlphaLayerRisky) showRiskIndicator = true; // Button says 'ABC', switching to Alpha
+            if (layout !== 'symbols' && isSymbolLayerRisky) showRiskIndicator = true; // Button says '?123', switching to Symbols
+        }
 
         return (
             <button
                 key={key}
                 disabled={isBlocked}
                 className={`
-                  ${width} h-10 sm:h-12 rounded-lg font-bold text-white transition-all duration-100 flex items-center justify-center
+                  ${width} h-10 sm:h-12 rounded-lg font-medium transition-all duration-100 flex items-center justify-center relative
                   ${isBlocked
-                        ? 'bg-gray-800 text-gray-500 cursor-not-allowed opacity-50'
-                        : isActive ? activeKey.color : 'bg-gray-700 hover:bg-gray-600 active:scale-95 shadow-md'
+                        ? 'bg-gray-200 text-gray-400 cursor-not-allowed shadow-none' // Blocked: Greyed out text/bg
+                        : isActive
+                            ? 'bg-gray-300 transform scale-95'  // Active: Slightly darker grey
+                            : 'bg-white text-black hover:bg-gray-50 shadow-md border-b-2 border-gray-200' // Default: White, raised
                     }
-                  text-xs sm:text-base 
+                  text-sm sm:text-base select-none
                 `}
                 onMouseDown={(e) => {
                     e.preventDefault();
@@ -84,6 +90,9 @@ export default function Keyboard({ onKeyPress, blockedKeys = [] }) {
                 }}
             >
                 {label}
+                {showRiskIndicator && (
+                    <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-red-500 ring-1 ring-white" />
+                )}
             </button>
         );
     };
@@ -92,11 +101,8 @@ export default function Keyboard({ onKeyPress, blockedKeys = [] }) {
 
     return (
         <div
-            className="flex flex-col gap-2 p-2 sm:p-4 bg-gray-900 rounded-xl shadow-2xl border border-gray-700 w-max touch-none max-w-full"
-            onMouseDown={(e) => {
-                e.preventDefault();
-                // e.stopPropagation(); // Let it bubble, the listener checks target
-            }}
+            className="flex flex-col gap-2 p-2 sm:p-4 bg-gray-100 rounded-xl shadow-xl border border-gray-300 w-max touch-none max-w-full select-none"
+            onMouseDown={(e) => e.preventDefault()}
         >
             {currentKeys.map((row, rowIndex) => (
                 <div key={rowIndex} className="flex justify-center gap-1">
