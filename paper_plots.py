@@ -73,7 +73,9 @@ def plot_reuse_density(ann):
 # 2. Reuse Risk vs Predictability (Scatter)
 def plot_risk_scatter(ann, mm):
     print("Plotting 2: Reuse Risk vs Predictability (Empirical)...")
-    with open("rockyou_typist.txt", "r", encoding="utf-8", errors="ignore") as f:
+    files = ["rockyou_typist.txt", "../rockyou_typist.txt"]
+    typist_file = next((f for f in files if os.path.exists(f)), "rockyou_typist.txt")
+    with open(typist_file, "r", encoding="utf-8", errors="ignore") as f:
         passwords = [line.strip() for line in f if len(line.strip()) > 0][:5000]
         
     risks = []
